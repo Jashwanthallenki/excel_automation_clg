@@ -47,20 +47,15 @@ for i, campus in enumerate(campuses):
 
 # -------- FONT LOADING HELPER --------
 def load_font(size, is_bold=False):
-    """
-    Looks for fonts in the current directory. 
-    Make sure these files are uploaded to your GitHub!
-    """
-    font_file = "arialbd.ttf" if is_bold else "arial.ttf"
-    
+    font_file = "arialbd.ttf" if is_bold else "arial\ARIAL.TTF"
     if os.path.exists(font_file):
         return ImageFont.truetype(font_file, size)
-    else:
-        # Fallback if you forget to upload fonts
-        return ImageFont.load_default()
+    return ImageFont.load_default()
 
 # -------- IMAGE GENERATION ENGINE --------
 def generate_final_report_image(rows, date_str):
+    # Widths: Increased total width and adjusted column distributions
+    # S.NO(60), Campus(340), Today(200), ThisYear(200), LastYear(200), Diff(200) = 1200
     width, height = 1200, 850
     img = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(img)
@@ -70,8 +65,9 @@ def generate_final_report_image(rows, date_str):
     black, white = (0, 0, 0), (255, 255, 255)
     border_gray = (180, 180, 180)
 
-    # Load specific fonts
+    # Load specific fonts (Reduced header font slightly to prevent overlap)
     f_title = load_font(32, True)
+    f_header = load_font(20, True) # Reduced from 26 to 20
     f_bold = load_font(26, True)
     f_reg = load_font(22, False)
 
@@ -83,14 +79,23 @@ def generate_final_report_image(rows, date_str):
     draw.rectangle([0, 80, width, 130], fill=white, outline=black)
     draw.text((20, 105), f"DATE: {date_str}", fill=black, font=f_bold, anchor="lm")
 
-    # 3. Table Headers
+    # 3. Table Column Headers
     y_offset = 130
-    col_x = [0, 80, 420, 620, 820, 1020, 1200]
-    header_labels = ["S.NO", "CAMPUS NAME", "TODAY'S\nADMISSIONS", "THIS YEAR AS ON\nDATE TOTAL", "LAST YEAR AS ON\nDATE TOTAL", "DIFFERENCE"]
+    # Widened the columns to give text more room
+    col_x = [0, 60, 400, 600, 800, 1000, 1200]
+    header_labels = [
+        "S.NO", 
+        "CAMPUS NAME", 
+        "TODAY'S\nADMISSIONS", 
+        "THIS YEAR AS ON\nDATE TOTAL", 
+        "LAST YEAR AS ON\nDATE TOTAL", 
+        "DIFFERENCE"
+    ]
     
     for i in range(len(header_labels)):
         draw.rectangle([col_x[i], y_offset, col_x[i+1], y_offset+100], fill=bright_green, outline=black)
-        draw.multiline_text(((col_x[i]+col_x[i+1])//2, y_offset+50), header_labels[i], fill=black, font=f_bold, anchor="mm", align="center")
+        # Using multiline_text for headers with a slightly smaller font
+        draw.multiline_text(((col_x[i]+col_x[i+1])//2, y_offset+50), header_labels[i], fill=black, font=f_header, anchor="mm", align="center", spacing=4)
 
     # 4. Data Rows
     y_offset += 100
@@ -123,4 +128,4 @@ def generate_final_report_image(rows, date_str):
 if st.button("Generate Final Report"):
     img_data = generate_final_report_image(data_for_report, formatted_date)
     st.image(img_data, caption="Report Preview")
-    st.download_button("⬇️ Download Image (PNG)", img_data, f"Report_{formatted_date}.png", "image/png") 
+    st.download_button("⬇️ Download Image (PNG)", img_data, f"Report_{formatted_date}.png", "image/png")
