@@ -47,7 +47,7 @@ for i, campus in enumerate(campuses):
 
 # -------- FONT LOADING HELPER --------
 def load_font(size, is_bold=False):
-    font_file = "arialbd.ttf" if is_bold else "arial\ARIAL.TTF"
+    font_file = "arialbd.ttf" if is_bold else "ARIAL.TTF"
     if os.path.exists(font_file):
         return ImageFont.truetype(font_file, size)
     return ImageFont.load_default()
