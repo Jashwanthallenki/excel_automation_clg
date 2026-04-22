@@ -38,50 +38,54 @@ for i, campus in enumerate(campuses):
 # -------- IMAGE GENERATOR --------
 def generate_image(data, date_text):
 
-    # Fonts
-    try:
-        font_title = ImageFont.truetype("arial.ttf", 24)
-        font_header = ImageFont.truetype("arial.ttf", 14)
-        font_cell = ImageFont.truetype("arial.ttf", 14)
-    except:
-        font_title = font_header = font_cell = ImageFont.load_default()
+    from PIL import Image, ImageDraw, ImageFont
 
-    # Layout
-    col_widths = [80, 320, 150, 220, 220, 120]
-    row_height = 45
+    # -------- Fonts (Excel-like) --------
+    try:
+        font_title = ImageFont.truetype("arialbd.ttf", 34)   # bold
+        font_header = ImageFont.truetype("arialbd.ttf", 18)
+        font_cell = ImageFont.truetype("arial.ttf", 18)
+        font_bold = ImageFont.truetype("arialbd.ttf", 18)
+    except:
+        font_title = font_header = font_cell = font_bold = ImageFont.load_default()
+
+    # -------- Layout (mobile optimized) --------
+    col_widths = [70, 260, 140, 200, 200, 120]
+    row_height = 60
 
     total_width = sum(col_widths)
-    total_height = 200 + (len(data) + 2) * row_height
+    total_height = 240 + (len(data) + 2) * row_height
 
     img = Image.new("RGB", (total_width, total_height), "white")
     draw = ImageDraw.Draw(img)
 
-    # Colors
+    # -------- Colors --------
     green = (139, 195, 74)
     light_green = (198, 239, 206)
     black = (0, 0, 0)
-    red = (255, 0, 0)
+    red = (220, 0, 0)
 
     # -------- TITLE --------
-    draw.rectangle([0, 0, total_width, 60], fill=green)
+    draw.rectangle([0, 0, total_width, 80], fill=green)
     title = "I YEAR ADMISSIONS 2026 - 2027"
-    w = draw.textlength(title, font=font_title)
-    draw.text(((total_width - w) / 2, 15), title, fill="black", font=font_title)
+
+    title_w = draw.textlength(title, font=font_title)
+    draw.text(((total_width - title_w)/2, 20), title, fill="black", font=font_title)
 
     # -------- DATE --------
-    draw.text((10, 75), f"DATE: {date_text}", fill="black", font=font_header)
+    draw.text((15, 100), f"DATE: {date_text}", fill="black", font=font_header)
 
-    # -------- HEADER --------
+    # -------- HEADERS --------
     headers = [
         "S.NO",
-        "CAMPUS NAME",
-        "TODAY'S",
-        "THIS YEAR TOTAL",
-        "LAST YEAR TOTAL",
+        "CAMPUS\nNAME",
+        "TODAY'S\nADMISSIONS",
+        "THIS YEAR AS ON DATE\nTOTAL ADMISSIONS",
+        "LAST YEAR AS ON DATE\nTOTAL ADMISSIONS",
         "DIFFERENCE"
     ]
 
-    y = 110
+    y = 140
 
     for i, h in enumerate(headers):
         x1 = sum(col_widths[:i])
@@ -89,12 +93,13 @@ def generate_image(data, date_text):
 
         draw.rectangle([x1, y, x2, y+row_height], fill=green, outline=black)
 
-        text_w = draw.textlength(h, font=font_header)
-        draw.text(
-            (x1 + (col_widths[i] - text_w)/2, y + 12),
+        draw.multiline_text(
+            (x1 + col_widths[i]/2, y + row_height/2),
             h,
             fill="black",
-            font=font_header
+            font=font_header,
+            anchor="mm",
+            align="center"
         )
 
     # -------- DATA ROWS --------
@@ -109,21 +114,15 @@ def generate_image(data, date_text):
 
             draw.rectangle([x1, y, x2, y+row_height], outline=black)
 
-            # 🔥 Handle Difference column
-            if i == 5:
-                color = red if val < 0 else black
-                text = str(val)
-            else:
-                color = black
-                text = str(val)
-
-            text_w = draw.textlength(text, font=font_cell)
+            # Negative coloring
+            color = red if (i == 5 and val < 0) else black
 
             draw.text(
-                (x1 + (col_widths[i] - text_w)/2, y + 12),
-                text,
+                (x1 + col_widths[i]/2, y + row_height/2),
+                str(val),
                 fill=color,
-                font=font_cell
+                font=font_cell,
+                anchor="mm"
             )
 
         total_today += row[2]
@@ -142,28 +141,23 @@ def generate_image(data, date_text):
 
         draw.rectangle([x1, y, x2, y+row_height], fill=light_green, outline=black)
 
-        if i == 5:
-            color = red if val < 0 else black
-        else:
-            color = black
+        color = red if (i == 5 and val < 0) else black
 
-        text = str(val)
-        text_w = draw.textlength(text, font=font_cell)
+        font_used = font_bold if i == 1 else font_cell
 
         draw.text(
-            (x1 + (col_widths[i] - text_w)/2, y + 12),
-            text,
+            (x1 + col_widths[i]/2, y + row_height/2),
+            str(val),
             fill=color,
-            font=font_cell
+            font=font_used,
+            anchor="mm"
         )
 
-    # Save
+    # -------- SAVE HIGH QUALITY --------
     file = "report.png"
-    img.save(file)
+    img.save(file, dpi=(300, 300))
 
     return file
-
-
 # -------- BUTTON --------
 if st.button("Generate Report"):
 
