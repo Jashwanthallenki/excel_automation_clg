@@ -1,15 +1,37 @@
 import streamlit as st
-from datetime import date
+from datetime import date, datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 import io
 import os
+import json
+
+# -------- PERSISTENCE LOGIC --------
+# File where data will be stored
+DATA_FILE = "admission_data.json"
+
+def load_persisted_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+            # Check if the data is older than 24 hours
+            last_saved = datetime.fromisoformat(data["timestamp"])
+            if datetime.now() - last_saved < timedelta(hours=24):
+                return data["input_data"]
+    # Default empty data
+    return {str(i): {"today": 0, "this_year": 0, "last_year": 0} for i in range(4)}
+
+def save_persisted_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump({
+            "timestamp": datetime.now().isoformat(),
+            "input_data": data
+        }, f)
 
 # -------- CONFIGURATION & STYLING --------
 st.set_page_config(layout="wide", page_title="Admission Report Generator")
 
 st.markdown("""
     <style>
-    /* Improve button visibility on mobile */
     .stButton>button { 
         background-color: #5cb85c; 
         color: white; 
@@ -19,7 +41,6 @@ st.markdown("""
         font-weight: bold;
         margin-top: 10px;
     }
-    /* Style the expander headers */
     .streamlit-expanderHeader {
         background-color: #f0f2f6;
         border-radius: 8px;
@@ -29,46 +50,49 @@ st.markdown("""
 
 st.title("📊 Admission Report Generator")
 
-# -------- STATE MANAGEMENT --------
+# Initialize data from file
+if 'saved_data' not in st.session_state:
+    st.session_state.saved_data = load_persisted_data()
+
 campuses = ["Peddamberpet Campus", "Bonguloor Campus", "Adibatla Campus", "Arjun Campus"]
-
-if 'input_data' not in st.session_state:
-    st.session_state.input_data = {i: {"today": 0, "this_year": 0, "last_year": 0} for i in range(len(campuses))}
-
 selected_date = st.date_input("Select Date", value=date.today())
 formatted_date = selected_date.strftime("%d-%m-%Y")
 
-# -------- MOBILE FRIENDLY INPUT UI (ALL OPEN BY DEFAULT) --------
 st.subheader("Enter Admission Details")
 
 data_for_report = []
+current_values = {}
 
 for i, campus in enumerate(campuses):
-    # Setting expanded=True makes all boxes open automatically
     with st.expander(f"📍 {campus}", expanded=True):
+        # Retrieve previously saved values (keys in JSON are strings)
+        prev = st.session_state.saved_data.get(str(i), {"today": 0, "this_year": 0, "last_year": 0})
+        
         col1, col2, col3 = st.columns(3)
         with col1:
-            t = st.number_input("Today", min_value=0, key=f"t_{i}", value=st.session_state.input_data[i]["today"])
+            t = st.number_input("Today", min_value=0, key=f"t_{i}", value=prev["today"])
         with col2:
-            ty = st.number_input("This Year As On Date Total", min_value=0, key=f"ty_{i}", value=st.session_state.input_data[i]["this_year"])
+            ty = st.number_input("This Year As On Date Total", min_value=0, key=f"ty_{i}", value=prev["this_year"])
         with col3:
-            ly = st.number_input("Last Year As On Date Total", min_value=0, key=f"ly_{i}", value=st.session_state.input_data[i]["last_year"])
+            ly = st.number_input("Last Year As On Date Total", min_value=0, key=f"ly_{i}", value=prev["last_year"])
         
-        # Save to state
-        st.session_state.input_data[i] = {"today": t, "this_year": ty, "last_year": ly}
+        current_values[str(i)] = {"today": t, "this_year": ty, "last_year": ly}
         data_for_report.append([i+1, campus, t, ty, ly, ty - ly])
-# -------- FONT LOADING HELPER (Same as before) --------
+
+# Save automatically when any value changes
+if current_values != st.session_state.saved_data:
+    save_persisted_data(current_values)
+    st.session_state.saved_data = current_values
+
+# -------- FONT LOADING HELPER --------
 def load_font(size, is_bold=False):
     font_file = "ARIALBD.TTF" if is_bold else "ARIAL.TTF"
     if os.path.exists(font_file):
         try: return ImageFont.truetype(font_file, size)
         except: return ImageFont.load_default()
-    folder_path = os.path.join("arial", font_file)
-    if os.path.exists(folder_path):
-        return ImageFont.truetype(folder_path, size)
     return ImageFont.load_default()
 
-# -------- IMAGE GENERATION ENGINE (Same as before) --------
+# -------- IMAGE GENERATION ENGINE --------
 def generate_final_report_image(rows, date_str):
     width, height = 1200, 1000 
     img = Image.new("RGB", (width, height), "white")
