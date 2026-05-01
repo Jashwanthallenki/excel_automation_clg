@@ -84,12 +84,19 @@ if current_session_values != st.session_state.saved_data:
     st.session_state.saved_data = current_session_values
 
 # -------- FONT LOADING --------
+# -------- FONT LOADING --------
 def load_font(size, is_bold=False):
-    font_file = "ARIALBD.TTF" if is_bold else "ARIAL.TTF"
-    if os.path.exists(font_file):
-        try: return ImageFont.truetype(font_file, size)
-        except: return ImageFont.load_default()
-    return ImageFont.load_default()
+    try:
+        if os.name == "nt":  # Windows
+            font_path = "arialbd.ttf" if is_bold else "ARIAL.TTF"
+        else:  # Linux / Streamlit Cloud
+            font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if is_bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+        return ImageFont.truetype(font_path, size)
+
+    except Exception as e:
+        print("Font Loading Error:", e)
+        return ImageFont.load_default()
 
 # -------- IMAGE GENERATION --------
 def generate_final_report_image(rows, date_str):
